@@ -1,0 +1,4 @@
+[pi4]
+kernel=Image.gz
+initramfs initrd.cpio.gz
+arm_64bit=1
