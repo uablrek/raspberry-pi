@@ -97,6 +97,6 @@ export __kver=linux-6.8
 # The kernel source is unpacker in $__kdir
 export __kdir=$HOME/tmp/linux/$__kver   # (or something better)
 eval $(./raspberry-pi.sh env)           # Define $__kcfg in your shell
-cp $PWD/config/linux-rpi-rpi4 $__kcfg
+cp $PWD/config/linux-rpi-reduced $__kcfg
 ./raspberry-pi.sh kernel_build --menuconfig   # (just exit...)
 ```

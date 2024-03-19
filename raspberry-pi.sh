@@ -209,40 +209,34 @@ cmd_tftpd() {
 	sudo $__atftpdir/atftpd --daemon --bind-address $__local_addr $__tftproot
 	log "Logs to syslog, tftproot=$__tftproot"
 }
-##   tftp_setup <alpine|local>
-##     Copy appropriate files to the tftp-boot directory
+##   tftp_setup [--keep] [cfgdir]
+##     Copy files from to cfgdir the tftp-boot directory. If cfgdir
+##     is unspecified, a local kernel/initrd is assumed.
+##     The tftp-boot directory is cleared, unless --keep is specified!
 cmd_tftp_setup() {
-	test -n "$1" || die "No setup"
-	# Configs
-	local c n
 	mkdir -p $__tftproot/$__id
-	rm $__tftproot/$__id/* > /dev/null 2>&1
-	for c in $1-cmdline.txt $1-config.txt; do
-		test -r $dir/config/$c || die "Not readable [$dir/config/$c]"
-		n=$(echo $c | sed -e "s,$1-,,")
-		cp $dir/config/$c $__tftproot/$__id/$n
-	done
-	# Rpi files
+	test "$__keep" = "yes" || rm $__tftproot/$__id/* > /dev/null 2>&1
+
+	# Rpi firmware files
+	local c
 	for c in start4.elf fixup4.dat bcm2711-rpi-4-b.dtb; do
 		findf $c || die "Not found [$c]"
 		cp $f $__tftproot/$__id
 	done
-	# Specific files
-	case $1 in
-		local)
-			test -r $__kbin || die "Not readable [$__kbin]"
-			gzip -c $__kbin > $__tftproot/$__id/Image.gz
-			test -r $__initrd || die "Not readable [$__initrd]"
-			cp $__initrd $__tftproot/$__id
-			;;
-		alpine)
-			findf vmlinuz-rpi4 || die "Not found [vmlinuz-rpi4]"
-			cp $f $__tftproot/$__id
-			#gzip -c $__kbin > $__tftproot/$__id/vmlinuz-rpi4
-			findf initramfs-rpi4 || die "Not found [initramfs-rpi4]"
-			cp $f $__tftproot/$__id
-			;;
-	esac
+
+	if test -z "$1"; then
+		log "Tftp setup with local kernel/initrd"
+		test -r $__kbin || die "Not readable [$__kbin]"
+		gzip -c $__kbin > $__tftproot/$__id/Image.gz
+		test -r $__initrd || die "Not readable [$__initrd]"
+		cp $__initrd $__tftproot/$__id
+		cp $dir/config/cmdline.txt $dir/config/config.txt $__tftproot/$__id
+	else
+		c=$1
+		test -d $c || die "Not a directory [$c]"
+		test -r "$c/config.txt" || die "Not readable [$c/config.txt]"
+		cp -r $c/* $__tftproot/$__id
+	fi
 }
 
 ##
