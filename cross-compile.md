@@ -8,15 +8,15 @@ sudo apt install gcc-aarch64-linux-gnu
 # Prefix: aarch64-linux-gnu-
 ```
 
-
 To use [musl-libc](https://https://musl.libc.org//) instead of `libc`
 (as [Alpine Linux](https://www.alpinelinux.org/)):
 ```
-musldir=$GOPATH/src/github.com/richfelker/musl-cross-make
+eval $(./raspberry-pi.sh env)           # Define $RASPBERRYPI_WORKSPACE
+musldir=$RASPBERRYPI_WORKSPACE/musl-cross-make # (or something better)
 git clone --depth 1 https://github.com/richfelker/musl-cross-make.git $musldir
 cd $musldir
-make
-make install  # To ./output by default
+make -j$(nproc) TARGET=aarch64-linux-musl   # (this takes ages!)
+make -j$(nproc) TARGET=aarch64-linux-musl install  # To ./output by default
 # To build user-space programs with musl:
 export PATH=$musldir/output/bin:$PATH
 # Prefix: aarch64-linux-musl-
