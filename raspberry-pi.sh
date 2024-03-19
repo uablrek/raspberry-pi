@@ -33,12 +33,6 @@ findf() {
 	test -n "$ARCHIVE" && f=$ARCHIVE/$1
 	test -r $f
 }
-crossenv_setup() {
-	musldir=$GOPATH/src/github.com/richfelker/musl-cross-make
-	test -x $musldir/output/bin/aarch64-linux-musl-gcc || \
-		die "musl-cross-make not installed"
-	export PATH=$musldir/output/bin:$PATH
-}
 
 
 ##   env
@@ -100,7 +94,6 @@ cmd_busybox_build() {
 	if ! test -d $d; then
 		tar -C $WS -xf $f || die
 	fi
-	crossenv_setup
 	if test "$__menuconfig" = "yes"; then
 		test -r $__bbcfg && cp $__bbcfg $d/.config
 		make -C $d menuconfig
@@ -108,7 +101,6 @@ cmd_busybox_build() {
 	else
 		test -r $__bbcfg || die "No config"
 		cp $__bbcfg $d/.config
-		make oldconfig
 	fi
 	make -C $d -j$(nproc)
 }
