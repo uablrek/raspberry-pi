@@ -36,6 +36,8 @@ sudo ip addr add $addr dev $dev
 sudo iptables -t nat -A POSTROUTING -s $cidr -j MASQUERADE
 sudo iptables -A FORWARD -s $cidr -j ACCEPT
 sudo iptables -A FORWARD -d $cidr -j ACCEPT
+# Or
+./raspberry-pi.sh interface_setup --dev=enp5s0 --local-addr=192.168.40.1/24
 ```
 
 Masquerading is used for internet access from the RPi.
@@ -46,15 +48,11 @@ Masquerading is used for internet access from the RPi.
 The Ubuntu [tftpd package](
 https://askubuntu.com/questions/201505/how-do-i-install-and-run-a-tftp-server)
 seem to have bugs and the `atftp` package doesn't work either, so the best
-way seem to be to atftp locally:
+way seem to be to build atftp locally:
 
 ```
-eval $(./raspberry-pi.sh env)    # Define $__atftpdir
-git clone --depth 1 https://github.com/madmartin/atftp.git $__atftpdir
-cd $__atftpdir
-./autogen.sh
-./configure
-make -j$(nproc)
+./raspberry-pi.sh versions       # Check that atftp archive is downloaded
+./raspberry-pi.sh atftp_build
 ```
 
 Then start with:
@@ -110,7 +108,7 @@ sudo tail -f  /var/log/syslog
 ```
 
 Reboot the RPi and monitor the printouts. Check especially if you have
-the $__id correct.  If the files and IP-addresses seem to be loaded,
+the `$__id` correct.  If the files and IP-addresses seem to be loaded,
 and it still doesn't work (e.g. rainbow-screen), try another
 distribution such as Alpine below.
 

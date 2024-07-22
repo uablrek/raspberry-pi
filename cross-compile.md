@@ -2,23 +2,24 @@
 
 Describes how to cross-compile on an Ubuntu PC to a `aarch64` target.
 
-
+For the kernel build, the Ubuntu aarch64 works:
 ```
 sudo apt install gcc-aarch64-linux-gnu
 # Prefix: aarch64-linux-gnu-
 ```
 
-To use [musl-libc](https://https://musl.libc.org//) instead of `libc`
-(as [Alpine Linux](https://www.alpinelinux.org/)):
+For all user-space programs [musl-libc](https://https://musl.libc.org//)
+is used instead of `libc`.
+
 ```
-eval $(./raspberry-pi.sh env)           # Define $RASPBERRYPI_WORKSPACE
-musldir=$RASPBERRYPI_WORKSPACE/musl-cross-make # (or something better)
+./raspberry-pi.sh env                # Check musldir
+export musldir=/tmp/musl-cross-make  # Re-define it if you like
 git clone --depth 1 https://github.com/richfelker/musl-cross-make.git $musldir
 cd $musldir
-make -j$(nproc) TARGET=aarch64-linux-musl   # (this takes ages!)
-make -j$(nproc) TARGET=aarch64-linux-musl install  # To ./output by default
+make -j$(nproc) TARGET=aarch64-linux-musl
+make -j$(nproc) TARGET=aarch64-linux-musl install OUTPUT=$PWD/aarch64
 # To build user-space programs with musl:
-export PATH=$musldir/output/bin:$PATH
+export PATH=$musldir/aarch64/bin:$PATH
 # Prefix: aarch64-linux-musl-
 ```
 

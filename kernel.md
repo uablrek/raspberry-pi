@@ -5,7 +5,7 @@ First, clone the `raspberrypi/linux` kernel:
 ```
 eval $(./raspberry-pi.sh env)    # Define $__kdir in your shell
 echo $__kdir
-git clone --depth=1 https://github.com/raspberrypi/linux $__kdir
+git clone --depth=1 https://github.com/raspberrypi/linux.git $__kdir
 ```
 This is assumed from now on.
 

@@ -34,6 +34,7 @@ The `raspberry-pi.sh` script is used for most tasks.
 ```
 ./raspberry-pi.sh             # Invoke without parameters for a help printout
 ./raspberry-pi.sh env         # Shows the environment that will be used
+./raspberry-pi.sh versions    # Shows sw versions and download status
 eval $(./raspberry-pi.sh env) # Define the variables in your shell
 ```
 
@@ -50,8 +51,8 @@ Example:
 export RASPBERRYPI_WORKSPACE=$HOME/tmp/raspberrypi  # (or something better)
 #export ARCHIVE=$HOME/archive       # (optional)
 # For network boot:
-export __id=...                     # The serial number of your rpi4
-export __local_addr='192.168.40.1'  # Local address of your tftp server
+export __id=...                       # The serial number of your rpi4
+export __local_addr='192.168.40.1/24' # Local address of your tftp server
 ```
 
 The "id" can be found on your RPi with:

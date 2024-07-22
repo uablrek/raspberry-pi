@@ -1,0 +1,14 @@
+#! /bin/sh
+. ./etc/profile
+
+ip link set lo up
+ip addr add 127.0.0.0/8 dev lo
+inetd
+
+hostname rpi4-001
+
+echo 0 > /proc/sys/net/ipv6/conf/eth0/accept_dad
+ip link set eth0 up
+udhcpc -t 5 -qf > /tmp/udhcpc.log
+
+

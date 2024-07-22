@@ -9,6 +9,7 @@
 
 prg=$(basename $0)
 dir=$(dirname $0); dir=$(readlink -f $dir)
+me=$dir/$prg
 tmp=/tmp/${prg}_$$
 
 die() {
@@ -33,6 +34,9 @@ findf() {
 	test -n "$ARCHIVE" && f=$ARCHIVE/$1
 	test -r $f
 }
+findar() {
+	findf $1.tar.bz2 || findf $1.tar.gz || findf $1.tar.xz || findf $1.zip
+}
 
 
 ##   env
@@ -40,34 +44,139 @@ findf() {
 cmd_env() {
 	test "$envread" = "yes" && return 0
 	envread=yes
+    cmd_versions
+    unset opts
 
-	test -n "$RASPBERRYPI_WORKSPACE" || RASPBERRYPI_WORKSPACE=$HOME/tmp/raspberrypi
+	eset RASPBERRYPI_WORKSPACE=/tmp/tmp/$USER/RPi KERNELDIR=$HOME/tmp/linux
 	WS=$RASPBERRYPI_WORKSPACE
-	test -n "$__kver" || __kver=linux-rpi
-	test -n "$__kdir" || __kdir=$WS/linux/$__kver
-	test -n "$__kcfg" || __kcfg=$dir/config/$__kver-reduced
-	test -n "$__kobj" || __kobj=$WS/obj/$(basename $__kcfg)
-	test -n "$__kbin" || __kbin=$__kobj/arch/arm64/boot/Image
-	test -n "$__id" || __id=ddfb4433
-	test -n "$__tftproot" || __tftproot=$WS/tftproot
-	test -n "$__bbver" || __bbver=busybox-1.36.1
-	test -n "$__bbcfg" || __bbcfg=$dir/config/$__bbver
-	test -n "$__initrd" || __initrd=$__kobj/initrd.cpio.gz
-	test -n "$__local_addr" || __local_addr=192.168.40.1
-	test -n "$__atftpdir" || __atftpdir=$WS/atftp
+	eset __kver=linux-rpi
+	eset __kcfg=$dir/config/$__kver-reduced
+	eset __kobj=$WS/obj/$(basename $__kcfg)
+	eset \
+		__kdir=$KERNELDIR/$__kver \
+		__kbin=$__kobj/arch/arm64/boot/Image \
+		__id=ddfb4433 \
+		__tftproot=$WS/tftproot \
+		__bbcfg=$dir/config/$ver_busybox \
+		__initrd=$__kobj/initrd.cpio.gz \
+		__local_addr=192.168.40.1/24 \
+		musldir=$GOPATH/src/github.com/richfelker/musl-cross-make
+
 	if test "$cmd" = "env"; then
-		opts="kver|kdir|kcfg|kobj|kbin|id|tftproot|bbver|bbcfg|initrd|local_addr|atftpdir"
-		set | grep -E "^(__($opts)|ARCHIVE|RASPBERRYPI_.*)="
+		set | grep -E "^($opts)="
 		exit 0
 	fi
+	test -n "$long_opts" && export $long_opts
+
 	mkdir -p $WS || die "Can't mkdir [$WS]"
+	test -x $musldir/aarch64/bin/aarch64-linux-musl-gcc || \
+		die "aarch64-linux-musl-gcc not found"
+	export PATH=$musldir/aarch64/bin:$PATH
+}
+# Set variables unless already defined. Vars are collected into $opts
+eset() {
+	local e k
+	for e in $@; do
+		k=$(echo $e | cut -d= -f1)
+		opts="$opts|$k"
+		test -n "$(eval echo \$$k)" || eval $e
+	done
+}
+##   versions [--brief]
+##     Print used sw versions
+cmd_versions() {
+	test "$versions_shown" = "yes" && return 0
+	versions_shown=yes
+	unset opts
+	eset \
+		ver_busybox=busybox-1.36.1 \
+		ver_atftp=atftp-0.8.0
+
+	test "$cmd" != "versions" && return 0
+	set | grep -E "^($opts)="
+	test "$__brief" = "yes" && return 0
+
+	echo "Downloaded:"
+	local k v
+	for k in $(echo $opts | tr '|' ' '); do
+		v=$(eval echo \$$k)
+		if findar $v; then
+			echo $f
+		else
+			echo "Missing archive [$v]"
+		fi
+	done
+	for v in bcm2711-rpi-4-b.dtb fixup4.dat start4.elf; do
+		if findf $v; then
+			echo $f
+		else
+			echo "Missing RPi file [$v]"
+		fi
+	done
+}
+# cdsrc <version>
+# Cd to the source directory. Unpack the archive if necessary.
+cdsrc() {
+	test -n "$1" || die "cdsrc: no version"
+	test "$__clean" = "yes" && rm -rf $WS/$1
+	if ! test -d $WS/$1; then
+		findar $1 || die "No archive for [$1]"
+		if echo $f | grep -qF '.zip'; then
+			unzip -d $WS -qq $f || die "Unzip [$f]"
+		else
+			tar -C $WS -xf $f || die "Unpack [$f]"
+		fi
+	fi
+	cd $WS/$1
+}
+##   setup --dev=<your-UNUSED-wired-interface>
+##     Setup from scratch. The kernel and BusyBox are built, and an
+##     initrd created. The local interface, dhcpd and tftpd are setup.
+##     RPi start files are copied to tftproot.  After this, the RPi
+##     should be ready to boot.
+##     WARNING: Requires "sudo"
+cmd_setup() {
+	cd $dir
+	$me interface_setup || die interface_setup
+	$me kernel_build || die kernel_build
+	$me busybox_build || die busybox_build
+	$me build_initrd ovl/rootfs0 || die build_initrd
+	$me atftp_build || die atftp_build
+	$me tftpd || die tftpd
+	$me dhcpd || die dhcpd
+	$me tftp_setup || die tftp_setup
+}
+##   interface_setup --dev=<your-UNUSED-wired-interface>
+##     Setup the local wired interface. An IPv4 /24 address must be used.
+##     Iptables masquerading setup, and forward accepted.
+##     WARNING: this requires "sudo" and may disable your network
+##              if --dev is used for something
+cmd_interface_setup() {
+	test -n "$__dev" || die "No unused wired interface specified"
+	if ip -4 addr show dev $__dev | grep -q inet; then
+		log "IPv4 address already exist on [$__dev]"
+		return 0
+	fi
+	ip link show $__dev > /dev/null || die "Not found [$__dev]"
+	echo $__local_addr | grep -q '/24$' || \
+		die "Not a IPv4 /24 address [$__local_addr]"
+	sudo ip link set up $__dev || die "ip link set up"
+	echo sudo ip addr add $__local_addr dev $__dev
+	sudo ip addr add $__local_addr dev $__dev || die "addr add"
+	local cidr=$(echo $__local_addr | sed -E 's,[0-9]+/24,0/24,')
+	sudo iptables -t nat -A POSTROUTING -s $cidr -j MASQUERADE
+	sudo iptables -A FORWARD -s $cidr -j ACCEPT
+	sudo iptables -A FORWARD -d $cidr -j ACCEPT
 }
 ##   kernel_build --tinyconfig  # Init the kcfg
 ##   kernel_build [--kver=] [--kcfg=] [--kdir=] [--kobj=] [--menuconfig]
 ##     Build the kernel
 cmd_kernel_build() {
+	test "$__clean" = "yes" && rm -rf $__kobj
 	mkdir -p $__kobj
-	local make="make -C $__kdir O=$__kobj ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-"
+	local CCprefix=aarch64-linux-gnu-
+	test "$__musl" = "yes" && CCprefix=aarch64-linux-musl-
+	local make="make -C $__kdir O=$__kobj ARCH=arm64 CROSS_COMPILE=$CCprefix"
 	if test "$__tinyconfig" = "yes"; then
 		rm -r $__kobj
 		mkdir -p $__kobj $(dirname $__kcfg)
@@ -89,26 +198,22 @@ cmd_kernel_build() {
 ##   busybox_build [--bbcfg=] [--menuconfig]
 ##     Build BusyBox for target aarch64-linux-musl-
 cmd_busybox_build() {
-	findf $__bbver.tar.bz2 || die "Can't find [$__bbver.tar.bz2]"
-	local d=$WS/$__bbver
-	if ! test -d $d; then
-		tar -C $WS -xf $f || die
-	fi
+	cdsrc $ver_busybox
 	if test "$__menuconfig" = "yes"; then
-		test -r $__bbcfg && cp $__bbcfg $d/.config
-		make -C $d menuconfig
-		cp $d/.config $__bbcfg
+		test -r $__bbcfg && cp $__bbcfg ./.config
+		make menuconfig
+		cp ./.config $__bbcfg
 	else
 		test -r $__bbcfg || die "No config"
-		cp $__bbcfg $d/.config
+		cp $__bbcfg ./.config
 	fi
-	make -C $d -j$(nproc)
+	make -j$(nproc)
 }
 ##   build_initrd [--initrd=] [ovls...]
 ##     Build a ramdisk (cpio archive) with busybox and the passed
 ##     ovls (a'la xcluster)
 cmd_build_initrd() {
-	local bb=$WS/$__bbver/busybox
+	local bb=$WS/$ver_busybox/busybox
 	test -x $bb || die "Not executable [$bb]"
 	touch $__initrd || die "Can't create [$__initrd]"
 
@@ -187,7 +292,15 @@ cmd_dhcpd() {
 	touch /tmp/udhcpd.leases
 	sudo busybox udhcpd -S $dir/config/udhcpd.conf
 }
-
+##   atftp_build
+##     Build atftp
+cmd_atftp_build() {
+	cdsrc $ver_atftp
+	test -x "./atftpd" && return 0
+	./autogen.sh || die autogen
+	./configure || die configure
+	make -j$(nproc) || die make
+}
 ##   tftpd [--tftproot=$RASPBERRYPI_WORKSPACE/tftproot]
 ##     Start a tftpd server. Prerequisite: "atftp" is built
 cmd_tftpd() {
@@ -196,9 +309,11 @@ cmd_tftpd() {
 		log "Tftpd (atftpd) already started as pid $pid"
 		return 0
 	fi
-	test -x $__atftpdir/atftpd || die "Not executable [$__atftpdir/atftpd]"
+	local d=$WS/$ver_atftp
+	test -x $d/atftpd || die "Not executable [$d/atftpd]"
 	mkdir -p "$__tftproot"
-	sudo $__atftpdir/atftpd --daemon --bind-address $__local_addr $__tftproot
+	local adr=$(echo $__local_addr | cut -d/ -f1)
+	sudo $d/atftpd --daemon --bind-address $adr $__tftproot
 	log "Logs to syslog, tftproot=$__tftproot"
 }
 ##   tftp_setup [--keep] [cfgdir]
@@ -250,6 +365,7 @@ while echo "$1" | grep -q '^--'; do
 		o=$(echo "$1" | sed -e 's,-,_,g')
 		eval "$o=yes"
 	fi
+	long_opts="$long_opts $o"
 	shift
 done
 unset o v
