@@ -1,0 +1,28 @@
+#! /bin/sh
+/bin/busybox echo "=== RPi4 initrd starting..."
+/bin/busybox mkdir -p /tmp /var/log /sbin /usr/bin /usr/sbin /mnt
+/bin/busybox --install -s
+
+ip link set lo up
+ip addr add 127.0.0.0/8 dev lo
+ip link set eth0 up
+udhcpc -t 5 -qf > /tmp/udhcpc.log
+if grep -qE 'serverid=' /tmp/udhcpc.log; then
+	eval $(grep -E 'serverid=' /tmp/udhcpc.log)
+	if wget -q http://$serverid:9090/ovls.txt; then
+		mount -t tmpfs tmpfs /mnt
+		cd /mnt
+		cp /tmp/udhcpc.log .
+		for t in $(cat /ovls.txt); do
+			echo $t
+			wget -q -O- http://$serverid:9090/$t | tar x || \
+				echo "FAIL: unpack [$t]"
+		done
+		test -x /mnt/init && exec switch_root /mnt /init
+	else
+		echo "FAIL: download ovls.txt"
+	fi
+else
+	echo "FAIL: no serverid found"
+fi
+exec /bin/ash

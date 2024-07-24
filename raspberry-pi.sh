@@ -57,6 +57,7 @@ cmd_env() {
 		__kbin=$__kobj/arch/arm64/boot/Image \
 		__id=ddfb4433 \
 		__tftproot=$WS/tftproot \
+		__httproot=$WS/httproot \
 		__bbcfg=$dir/config/$ver_busybox \
 		__initrd=$__kobj/initrd.cpio.gz \
 		__local_addr=192.168.40.1/24 \
@@ -138,13 +139,15 @@ cdsrc() {
 cmd_setup() {
 	cd $dir
 	$me interface_setup || die interface_setup
-	$me kernel_build || die kernel_build
-	$me busybox_build || die busybox_build
-	$me build_initrd ovl/rootfs0 || die build_initrd
 	$me atftp_build || die atftp_build
 	$me tftpd || die tftpd
 	$me dhcpd || die dhcpd
+	$me httpd || die httpd
+	$me kernel_build || die kernel_build
+	$me busybox_build || die busybox_build
+	$me build_initrd ovl/initrd || die build_initrd
 	$me tftp_setup || die tftp_setup
+	$me collect_ovls ovl/rootfs
 }
 ##   interface_setup --dev=<your-UNUSED-wired-interface>
 ##     Setup the local wired interface. An IPv4 /24 address must be used.
@@ -228,7 +231,7 @@ file /bin/busybox $bb 755 0 0
 slink /bin/sh busybox 755 0 0
 EOF
 	if test -n "$1"; then
-		cmd_collect_ovls $tmp/root $@
+		cmd_unpack_ovls $tmp/root $@
 		cmd_emit_list $tmp/root >> $tmp/cpio-list
 	else
 		cat >> $tmp/cpio-list <<EOF
@@ -249,9 +252,9 @@ cmd_gen_init_cpio() {
 	test -r $src || die "Not readable [$src]"
 	gcc -o $x $src
 }
-#   collect_ovls <dst> [ovls...]
-#     Collect ovls to the <dst> dir
-cmd_collect_ovls() {
+#   unpack_ovls <dst> [ovls...]
+#     Unpack ovls to the <dst> dir
+cmd_unpack_ovls() {
 	test -n "$1" || die "No dest"
 	test -e $1 -a ! -d "$1" && die "Not a directory [$1]"
 	mkdir -p $1 || die "Failed mkdir [$1]"
@@ -277,6 +280,28 @@ cmd_emit_list() {
 		p=$(stat --printf='%a' $d$x)
 		echo "file $x $d$x $p 0 0"
 	done
+}
+##   collect_ovls [ovls...]
+##     Collect ovl's to the --httproot
+cmd_collect_ovls() {
+	mkdir -p $__httproot || dir "mkdir -p $__httproot"
+	local out=$__httproot/ovls.txt
+	rm $(find $__httproot -name '*.tar') $out 2> /dev/null
+	local ovl i=1 f
+	for ovl in $@; do
+		f=$(printf "%02d%s.tar" $i $(basename $ovl))
+		echo $f >> $out
+		i=$((i + 1))
+		test -x $ovl/tar || die "Not executable [$ovl/tar]"
+		$ovl/tar $__httproot/$f || die "Failed [$ovl]"
+	done
+}
+##   httpd
+##     Start a http server on --local-addr and port 9090
+cmd_httpd() {
+	local adr=$(echo $__local_addr | cut -d/ -f1)
+	mkdir -p $__httproot || dir "mkdir -p $__httproot"
+	busybox httpd -p $adr:9090 -h $__httproot
 }
 ##   dhcpd
 ##     Start "busybox udhcpd" as dhcp server

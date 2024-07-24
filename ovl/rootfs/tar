@@ -1,0 +1,29 @@
+#! /bin/sh
+# NOTE: A common pattern is to specify "-" (stdout) as out-file,
+#  so there must be NO log printouts to stdout!
+
+dir=$(dirname $0); dir=$(readlink -f $dir)
+tmp=/tmp/$USER/rpi_$$
+die() {
+	echo "ERROR: $*" >&2
+	rm -rf $tmp
+	exit 1
+}
+log() {
+	echo "INFO: $*" >&2
+}
+test -n "$1" || die "No out-file"
+cd $dir
+sh=../../raspberry-pi.sh
+test -x $sh || die "Not executable [$sh]"
+eval $($sh env)
+eval $($sh versions --brief)
+bb=$RASPBERRYPI_WORKSPACE/$ver_busybox/busybox
+test -x $bb || die "Not executable [$bb]"
+
+mkdir -p $tmp/bin
+cp -r * $tmp
+cp $bb $tmp/bin
+cd $tmp
+tar --exclude='tar' --exclude='README.md' -cf "$1" *
+rm -rf $tmp
