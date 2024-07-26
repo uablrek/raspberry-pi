@@ -5,6 +5,29 @@ https://www.raspberrypi.com/documentation/computers/remote-access.html#raspberry
 When developing and testing kernels and initrds netboot is convenient,
 almost a necessity actually.
 
+How it works:
+
+1. The firmware on the RPi tries to get an address and the tftp via
+   [DHCP](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol)
+2. The RPi downloads the start images (e.g. start4.elf), and config files
+   (config.txt, cmdline.txt) via
+   [TFTP](https://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol)
+3. The RPi downloads the kernel and initrd via TFTP, and starts linux
+
+The `initrd` has limited size (and tftp is very slow), so a new
+`tmpfs` root is created by the `initrd` and is populated with ovls via
+`http`. So we must start a http server, and collect some ovls. At
+least a "rootfs" is *required*.
+
+Quick start if you feel lucky:
+```
+./raspberry-pi.sh versions                 # Check Downloads
+vi config/udhcpd.conf                      # Alter the interface
+./raspberry-pi.sh setup --dev=<your-UNUSED-wired-interface>
+```
+
+## Enable network boot
+
 First boot the RPi from an SD card and change boot order. Also get the
 serial-no which will be used for tftp boot later.
 

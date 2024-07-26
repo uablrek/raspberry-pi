@@ -20,10 +20,15 @@ eval $($sh env)
 eval $($sh versions --brief)
 bb=$RASPBERRYPI_WORKSPACE/$ver_busybox/busybox
 test -x $bb || die "Not executable [$bb]"
+d=$musldir/aarch64/aarch64-linux-musl/lib
+test -d $d || die "Not a directory [$d]"
 
-mkdir -p $tmp/bin
+mkdir -p $tmp/bin $tmp/lib
 cp -r * $tmp
 cp $bb $tmp/bin
+cp -L $d/lib*.so.[0-9] $tmp/lib
+cp $d/libc.so $tmp/lib/ld-musl-aarch64.so.1
 cd $tmp
+
 tar --exclude='tar' --exclude='README.md' -cf "$1" *
 rm -rf $tmp

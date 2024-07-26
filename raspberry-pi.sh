@@ -47,7 +47,9 @@ cmd_env() {
     cmd_versions
     unset opts
 
-	eset RASPBERRYPI_WORKSPACE=/tmp/tmp/$USER/RPi KERNELDIR=$HOME/tmp/linux
+	eset \
+		RASPBERRYPI_WORKSPACE=/tmp/tmp/$USER/RPi \
+		KERNELDIR=$HOME/tmp/linux
 	WS=$RASPBERRYPI_WORKSPACE
 	eset __kver=linux-rpi
 	eset __kcfg=$dir/config/$__kver-reduced
@@ -114,6 +116,11 @@ cmd_versions() {
 			echo "Missing RPi file [$v]"
 		fi
 	done
+	if test -r $__kdir/Kbuild; then
+		echo "Kernel at [$__kdir]"
+	else
+		echo "Kernel NOT cloned [$__kdir]"
+	fi
 }
 # cdsrc <version>
 # Cd to the source directory. Unpack the archive if necessary.
