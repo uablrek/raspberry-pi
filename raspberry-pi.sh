@@ -205,6 +205,14 @@ cmd_kernel_build() {
 	fi
 	$make -j$(nproc) Image modules dtbs
 }
+##   install_modules <dest>
+##     Install kernel modules in the dest directory
+cmd_install_modules() {
+	test -n "$1" || die "No dest directory"
+	test -d "$1" || mkdir -p $1 || die "Failed [mkdir -p $1]"
+	INSTALL_MOD_PATH=$1 make -j$(nproc) -C $__kobj modules_install \
+		1>&2 > /dev/null || die "Failed to install modules from [$__kobj]"
+}
 ##   busybox_build [--bbcfg=] [--menuconfig]
 ##     Build BusyBox for target aarch64-linux-musl-
 cmd_busybox_build() {

@@ -35,6 +35,8 @@ eval $(./raspberry-pi.sh env)           # Define $__kdir in your shell
 cp $__kdir/arch/arm64/configs/bcm2711_defconfig $__kcfg
 ./raspberry-pi.sh env                   # Check build dirs
 ./raspberry-pi.sh kernel_build --menuconfig   # (just exit...)
+./raspberry-pi.sh build_initrd ovl/rootfs0 ovl/modules
+./raspberry-pi.sh tftp_setup
 ```
 
 ## Build a minimal kernel
