@@ -154,7 +154,7 @@ cmd_setup() {
 	$me kernel_build || die kernel_build
 	$me build_initrd ovl/initrd || die build_initrd
 	$me tftp_setup || die tftp_setup
-	$me collect_ovls ovl/rootfs
+	$me collect_ovls ovl/rootfs ovl/modules
 }
 ##   interface_setup --dev=<your-UNUSED-wired-interface>
 ##     Setup the local wired interface. An IPv4 /24 address must be used.

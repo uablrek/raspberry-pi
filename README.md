@@ -10,10 +10,10 @@ https://www.instructables.com/Pipboy-Built-From-Scrap/) for my boy.  I
 may still end up there, but now the focus is on learning, and to build
 a small system with my own kernel and rootfs (no distro).  Since
 experimenting with kernel builds includes re-build and re-load perhaps
-50 times in a day, building on RPi, or using a SD-card is not feasible.
-Instead [cross-compilation](cross-compile.md) and [network
-booting](boot.md) is used. The basic installation is described
-in the [RPi documentation](
+50 times in a day, building on RPi, or using a SD-card is not
+feasible.  Instead [cross-compilation](cross-compile.md) and [network
+booting](boot.md#network-boot) is used. The basic installation is
+described in the [RPi documentation](
 https://www.raspberrypi.com/documentation/computers/) and is not
 repeated here.
 
@@ -60,7 +60,3 @@ The "id" can be found on your RPi with:
 grep Serial /proc/cpuinfo | cut -d ' ' -f 2 | cut -c 9-16
 ```
 
-
-## References
-
-* https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#eeprom-boot-flow

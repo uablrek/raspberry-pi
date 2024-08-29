@@ -177,5 +177,10 @@ ls -lh $__tftproot/$__id
 
 ## Boot from microSD
 
-* https://hechao.li/2021/12/20/Boot-Raspberry-Pi-4-Using-uboot-and-Initramfs/
+WIP
 
+
+## References
+
+* https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#eeprom-boot-flow
+* https://hechao.li/2021/12/20/Boot-Raspberry-Pi-4-Using-uboot-and-Initramfs/
