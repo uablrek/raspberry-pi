@@ -16,6 +16,7 @@ is used instead of `libc`.
 export musldir=/tmp/musl-cross-make  # Re-define it if you like
 git clone --depth 1 https://github.com/richfelker/musl-cross-make.git $musldir
 cd $musldir
+#sed -e -i 's,GCC_VER = 9.4.0,GCC_VER = 11.4.0,'
 make -j$(nproc) TARGET=aarch64-linux-musl
 make -j$(nproc) TARGET=aarch64-linux-musl install OUTPUT=$PWD/aarch64
 # To build user-space programs with musl:

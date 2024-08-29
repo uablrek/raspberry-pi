@@ -1,9 +1,28 @@
-# Raspberry Pi - Network boot
+# Raspberry Pi - Boot
+
+The RPi boot sequence is well described in [the documentation](
+https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#boot-sequence). The RPi 4 has a bootloader in EEPROM, so no bootloader, like [U-boot](
+https://docs.u-boot.org/en/latest/#) is needed (but you might want it anyway).
+The root fs is always on ram disk (tmpfs).
+
+
+## Firmware files
+
+Some firmware boot files must be downloaded (to $HOME/Downloads or $ARCHIVE):
+
+* [bcm2711-rpi-4-b.dtb](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/bcm2711-rpi-4-b.dtb)
+* [fixup4.dat](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/fixup4.dat)
+* [start4.elf](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/start4.elf)
+
+These are the most essential, but there may be others.
+
+
+
+
+## Network Boot
 
 This network boot instruction is generic, see also the [RPi documentation](
 https://www.raspberrypi.com/documentation/computers/remote-access.html#raspberry-pi-4-model-b).
-When developing and testing kernels and initrds netboot is convenient,
-almost a necessity actually.
 
 How it works:
 
@@ -26,7 +45,7 @@ vi config/udhcpd.conf                      # Alter the interface
 ./raspberry-pi.sh setup --dev=<your-UNUSED-wired-interface>
 ```
 
-## Enable network boot
+### Enable network boot
 
 First boot the RPi from an SD card and change boot order. Also get the
 serial-no which will be used for tftp boot later.
@@ -42,7 +61,7 @@ sudo raspi-config
 ```
 
 
-## Connect your PC to the RPi with wired ethernet
+### Connect your PC to the RPi with wired ethernet
 
 You want to be in control over the boot network, for instance start a
 DHCP server without conflicting with your ISP router. I use a direct
@@ -66,7 +85,7 @@ sudo iptables -A FORWARD -d $cidr -j ACCEPT
 Masquerading is used for internet access from the RPi.
 
 
-## TFTP server
+### TFTP server
 
 The Ubuntu [tftpd package](
 https://askubuntu.com/questions/201505/how-do-i-install-and-run-a-tftp-server)
@@ -86,7 +105,7 @@ export __id=(your-serial-number)
 sudo tail -f /var/log/syslog
 ```
 
-## DHCP server
+### DHCP server
 
 Be careful with the DHCP server, you don't want it to conflict with
 your internet setup. I am using `udhcpd` which is included in `BusyBox`.
@@ -96,18 +115,7 @@ vi ./config/udhcpd.conf  # Especially the "interface"
 ./raspberry-pi.sh dhcpd
 ```
 
-## Firmware files
-
-Some firmware boot files must be downloaded (to $HOME/Downloads or $ARCHIVE):
-
-* [bcm2711-rpi-4-b.dtb](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/bcm2711-rpi-4-b.dtb)
-* [fixup4.dat](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/fixup4.dat)
-* [start4.elf](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/start4.elf)
-
-These are the most essential, but there may be others.
-
-
-## Boot!
+### Boot!
 
 If you have built the local kernel and initrd, you should be able to do:
 
@@ -137,7 +145,7 @@ distribution such as Alpine below.
 
 
 
-## Alpine Linux
+### Alpine Linux
 
 [Alpine Linux](https://www.alpinelinux.org/) has a [netboot instruction](
 https://wiki.alpinelinux.org/wiki/Raspberry_Pi#Netboot). Copy the boot
@@ -166,4 +174,8 @@ arm_64bit=1
 ls -lh $__tftproot/$__id
 # Power-on the RPi
 ```
+
+## Boot from microSD
+
+* https://hechao.li/2021/12/20/Boot-Raspberry-Pi-4-Using-uboot-and-Initramfs/
 

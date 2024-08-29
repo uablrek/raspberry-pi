@@ -44,7 +44,7 @@ findar() {
 cmd_env() {
 	test "$envread" = "yes" && return 0
 	envread=yes
-    cmd_versions
+    versions
     unset opts
 
 	eset \
@@ -87,15 +87,14 @@ eset() {
 }
 ##   versions [--brief]
 ##     Print used sw versions
-cmd_versions() {
-	test "$versions_shown" = "yes" && return 0
-	versions_shown=yes
+versions() {
 	unset opts
 	eset \
 		ver_busybox=busybox-1.36.1 \
 		ver_atftp=atftp-0.8.0
-
-	test "$cmd" != "versions" && return 0
+}
+cmd_versions() {
+	versions
 	set | grep -E "^($opts)="
 	test "$__brief" = "yes" && return 0
 
@@ -137,7 +136,7 @@ cdsrc() {
 	fi
 	cd $WS/$1
 }
-##   setup --dev=<your-UNUSED-wired-interface>
+##   setup [--base] --dev=<your-UNUSED-wired-interface>
 ##     Setup from scratch. The kernel and BusyBox are built, and an
 ##     initrd created. The local interface, dhcpd and tftpd are setup.
 ##     RPi start files are copied to tftproot.  After this, the RPi
@@ -150,8 +149,9 @@ cmd_setup() {
 	$me tftpd || die tftpd
 	$me dhcpd || die dhcpd
 	$me httpd || die httpd
-	$me kernel_build || die kernel_build
 	$me busybox_build || die busybox_build
+	test "$__base" = "yes" && return 0
+	$me kernel_build || die kernel_build
 	$me build_initrd ovl/initrd || die build_initrd
 	$me tftp_setup || die tftp_setup
 	$me collect_ovls ovl/rootfs
