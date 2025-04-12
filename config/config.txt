@@ -2,3 +2,5 @@
 kernel=Image.gz
 initramfs initrd.cpio.gz
 arm_64bit=1
+dtoverlay=vc4-kms-v3d-pi4
+disable_fw_kms_setup=1

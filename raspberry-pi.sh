@@ -108,7 +108,8 @@ cmd_versions() {
 			echo "Missing archive [$v]"
 		fi
 	done
-	for v in bcm2711-rpi-4-b.dtb fixup4.dat start4.elf; do
+	for v in bcm2711-rpi-4-b.dtb fixup4.dat start4.elf \
+		vc4-fkms-v3d-pi4.dtbo vc4-kms-v3d-pi4.dtbo; do
 		if findf $v; then
 			echo $f
 		else
@@ -144,6 +145,7 @@ cdsrc() {
 ##     WARNING: Requires "sudo"
 cmd_setup() {
 	cd $dir
+	test "$__clean" = "yes" && rm -rf $WS
 	$me interface_setup || die interface_setup
 	$me atftp_build || die atftp_build
 	$me tftpd || die tftpd
@@ -356,19 +358,23 @@ cmd_tftpd() {
 	sudo $d/atftpd --daemon --bind-address $adr $__tftproot
 	log "Logs to syslog, tftproot=$__tftproot"
 }
-##   tftp_setup [--keep] [cfgdir]
-##     Copy files from to cfgdir the tftp-boot directory. If cfgdir
-##     is unspecified, a local kernel/initrd is assumed.
-##     The tftp-boot directory is cleared, unless --keep is specified!
+##   tftp_setup [--keep] [alpine]
+##     Copy to the tftp-boot directory.  The tftp-boot directory is
+##     cleared, unless --keep is specified!
 cmd_tftp_setup() {
-	mkdir -p $__tftproot/$__id
-	test "$__keep" = "yes" || rm $__tftproot/$__id/* > /dev/null 2>&1
+	local tftpd=$__tftproot/$__id
+	mkdir -p $tftpd
+	test "$__keep" = "yes" || rm -rf $tftpd/* > /dev/null 2>&1
 
 	# Rpi firmware files
 	local c
 	for c in start4.elf fixup4.dat bcm2711-rpi-4-b.dtb; do
 		findf $c || die "Not found [$c]"
-		cp $f $__tftproot/$__id
+		cp $f $tftpd
+	done
+	mkdir -p $tftpd/overlays
+	for c in vc4-fkms-v3d-pi4.dtbo vc4-kms-v3d-pi4.dtbo; do
+		findf $c && cp $f $tftpd/overlays
 	done
 
 	if test -z "$1"; then
@@ -378,12 +384,19 @@ cmd_tftp_setup() {
 		test -r $__initrd || die "Not readable [$__initrd]"
 		cp $__initrd $__tftproot/$__id
 		cp $dir/config/cmdline.txt $dir/config/config.txt $__tftproot/$__id
-	else
-		c=$1
-		test -d $c || die "Not a directory [$c]"
-		test -r "$c/config.txt" || die "Not readable [$c/config.txt]"
-		cp -r $c/* $__tftproot/$__id
+		return
 	fi
+
+	tftp_setup_$1
+}
+tftp_setup_alpine() {
+	local tftpd=$__tftproot/$__id
+	findf vmlinuz-rpi || die "Can't find [vmlinuz-rpi]"
+	cp $f $tftpd/Image.gz
+	findf initramfs-rpi || die "Can't find [initramfs-rpi]"
+	cp $f $tftpd/initrd.cpio.gz
+	cp $dir/config/config.txt $tftpd
+	echo "modules=loop,squashfs ip=dhcp alpine_repo=http://dl-cdn.alpinelinux.org/alpine/edge/main modloop=http://dl-cdn.alpinelinux.org/alpine/edge/releases/aarch64/netboot/modloop-rpi4" > $tftpd/cmdline.txt
 }
 
 ##

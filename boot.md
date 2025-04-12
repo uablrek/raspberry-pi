@@ -14,9 +14,11 @@ Some firmware boot files must be downloaded (to $HOME/Downloads or $ARCHIVE):
 * [fixup4.dat](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/fixup4.dat)
 * [start4.elf](https://raw.githubusercontent.com/raspberrypi/firmware/master/boot/start4.elf)
 
-These are the most essential, but there may be others.
+These are the most essential, but there are others like [overlays](
+https://github.com/raspberrypi/firmware/tree/master/boot/overlays)
 
-
+* [vc4-kms-v3d-pi4.dtbo](https://github.com/raspberrypi/firmware/raw/master/boot/overlays/vc4-kms-v3d-pi4.dtbo)
+* [vc4-fkms-v3d-pi4.dtbo](https://github.com/raspberrypi/firmware/raw/master/boot/overlays/vc4-fkms-v3d-pi4.dtbo)
 
 
 ## Network Boot
